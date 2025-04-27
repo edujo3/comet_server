@@ -1,36 +1,35 @@
 from flask import Flask, request, jsonify
-import io
 from PIL import Image
-import base64
-import os
+import io
 
 app = Flask(__name__)
 
-@app.route("/", methods=["GET"])
+# Limitar el tamaño máximo de subida (ejemplo: 5MB)
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+
+@app.route('/')
 def home():
-    return "✅ COMET Server funcionando correctamente"
+    return jsonify({"message": "Hello from COMET Server!"})
 
-@app.route("/analyze", methods=["POST"])
-def analyze():
-    # Verificar si hay un archivo en la solicitud
+@app.route('/receive_image', methods=['POST'])
+def receive_image():
     if 'image' not in request.files:
-        return jsonify({"error": "No se encontró ninguna imagen en la solicitud."}), 400
+        return jsonify({"error": "No image part in the request"}), 400
 
-    # Leer la imagen enviada
-    image_file = request.files['image']
-    image_bytes = image_file.read()
+    file = request.files['image']
 
-    # (Opcional) Procesar la imagen aquí (por ahora solo simular)
-    # Podrías usar IA para análisis real.
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
 
-    # Para ahora: detectar rostro "simulado" (en el futuro usar OpenAI Vision si quieres)
-    face_detected = True
-    emotion = "happy"  # Podrías cambiarlo luego dinámicamente.
+    try:
+        # Leer la imagen recibida
+        image_bytes = file.read()
+        image = Image.open(io.BytesIO(image_bytes))
+        print(f"Imagen recibida: {image.format}, {image.size}, {image.mode}")
 
-    # Devolver respuesta JSON
-    return jsonify({
-        "face_detected": face_detected,
-        "emotion": emotion
-    })
+        return jsonify({"message": "Image received successfully!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-# Nota: No coloques if __name__ == "__main__" porque Gunicorn levantará la app automáticamente
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
