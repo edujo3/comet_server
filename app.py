@@ -1,41 +1,31 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from PIL import Image
 import io
-import base64
+import os
 
 app = Flask(__name__)
+CORS(app)
 
-@app.route('/')
+# 🔥 Aumentar el límite permitido de carga (por defecto en Flask es 16MB, pero aseguramos)
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
+
+@app.route('/', methods=['GET'])
 def index():
     return "✅ COMET Server funcionando correctamente"
 
 @app.route('/receive_image', methods=['POST'])
 def receive_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded'}), 400
+
+    image_file = request.files['image']
+
     try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'No se recibió ningún archivo llamado "image"'}), 400
-
-        image_file = request.files['image']
-        
-        if image_file.filename == '':
-            return jsonify({'error': 'Nombre de archivo vacío'}), 400
-
-        # Leer imagen en memoria
-        img_bytes = image_file.read()
-        img = Image.open(io.BytesIO(img_bytes))
-        
-        # Convertir la imagen a Base64 para visualizar si queremos
-        buffered = io.BytesIO()
-        img.save(buffered, format="JPEG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-
-        print("✅ Imagen recibida y procesada exitosamente. Tamaño:", img.size)
-
-        return jsonify({'message': 'Imagen recibida correctamente', 'width': img.width, 'height': img.height})
-
+        img = Image.open(image_file.stream)
+        width, height = img.size
+        print(f"📷 Imagen recibida. Tamaño: {width}x{height}")
+        return jsonify({'message': 'Imagen recibida correctamente', 'width': width, 'height': height}), 200
     except Exception as e:
-        print("⚠️ Error procesando la imagen:", str(e))
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+        print("❌ Error procesando la imagen:", str(e))
+        return jsonify({'error': 'Failed to process image'}), 500
