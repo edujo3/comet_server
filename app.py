@@ -1,30 +1,45 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import time
 
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/', methods=['GET'])
+UPLOAD_FOLDER = '/tmp'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/')
 def index():
-    return "✅ COMET Server funcionando correctamente", 200
+    return '✅ COMET Server funcionando correctamente'
 
 @app.route('/receive_image', methods=['POST'])
 def receive_image():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No se envió imagen'}), 400
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No se encontró el campo "image".'}), 400
 
-    image = request.files['image']
-    if image.filename == '':
-        return jsonify({'error': 'Nombre de archivo vacío'}), 400
+        image = request.files['image']
 
-    # Guarda temporalmente la imagen
-    save_path = os.path.join("/tmp", image.filename)
-    image.save(save_path)
+        if image.filename == '':
+            return jsonify({'error': 'Nombre de archivo vacío.'}), 400
 
-    print(f"✅ Imagen recibida y guardada: {save_path}")
+        # Solo continuar si el archivo es imagen
+        if not image.mimetype.startswith('image/'):
+            return jsonify({'error': 'El archivo no es una imagen válida.'}), 400
 
-    return jsonify({'message': 'Imagen recibida correctamente ✅'}), 200
+        # Guardar archivo en /tmp
+        filename = f"captura_{int(time.time())}.jpg"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        image.save(filepath)
+
+        print(f"✅ Imagen recibida: {filepath}")
+
+        return jsonify({'message': 'Imagen recibida exitosamente.'}), 200
+
+    except Exception as e:
+        print(f"❌ Error en servidor: {e}")
+        return jsonify({'error': 'Error procesando la imagen.'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
