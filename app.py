@@ -1,59 +1,36 @@
 from flask import Flask, request, jsonify
-import requests
+import io
+from PIL import Image
 import base64
 import os
 
 app = Flask(__name__)
 
-# Tu API Key de OpenAI (se carga de variables de entorno)
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+@app.route("/", methods=["GET"])
+def home():
+    return "✅ COMET Server funcionando correctamente"
 
-@app.route('/analyze', methods=['POST'])
+@app.route("/analyze", methods=["POST"])
 def analyze():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file provided"}), 400
+    # Verificar si hay un archivo en la solicitud
+    if 'image' not in request.files:
+        return jsonify({"error": "No se encontró ninguna imagen en la solicitud."}), 400
 
-    file = request.files['file']
-    image_bytes = file.read()
-    base64_image = base64.b64encode(image_bytes).decode('utf-8')
+    # Leer la imagen enviada
+    image_file = request.files['image']
+    image_bytes = image_file.read()
 
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json"
-    }
+    # (Opcional) Procesar la imagen aquí (por ahora solo simular)
+    # Podrías usar IA para análisis real.
 
-    payload = {
-        "model": "gpt-4-vision-preview",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Detecta si hay un rostro humano en la imagen y cuál es su emoción (feliz, triste, neutro, enojado). Devuelve respuesta JSON {\"face_detected\": true/false, \"emotion\": \"feliz/triste/neutro/enojado\"}."},
-                    {
-                        "type": "image",
-                        "image": base64_image
-                    }
-                ]
-            }
-        ],
-        "max_tokens": 300
-    }
+    # Para ahora: detectar rostro "simulado" (en el futuro usar OpenAI Vision si quieres)
+    face_detected = True
+    emotion = "happy"  # Podrías cambiarlo luego dinámicamente.
 
-    response = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers=headers,
-        json=payload
-    )
+    # Devolver respuesta JSON
+    return jsonify({
+        "face_detected": face_detected,
+        "emotion": emotion
+    })
 
-    if response.status_code == 200:
-        data = response.json()
-        try:
-            message = data['choices'][0]['message']['content']
-            return message, 200
-        except Exception as e:
-            return jsonify({"error": "Parsing response error"}), 500
-    else:
-        return jsonify({"error": f"OpenAI API error {response.status_code}"}), 500
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+# Nota: No coloques if __name__ == "__main__" porque Gunicorn levantará la app automáticamente
