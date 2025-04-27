@@ -1,5 +1,3 @@
 Flask
-requests
+flask_cors
 gunicorn
-Pillow
-flask-cors
