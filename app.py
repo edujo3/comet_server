@@ -1,31 +1,40 @@
 from flask import Flask, request, jsonify
 from PIL import Image
 import io
+import base64
 
 app = Flask(__name__)
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
-    return '✅ COMET Server funcionando correctamente'
+    return "✅ COMET Server funcionando correctamente"
 
 @app.route('/receive_image', methods=['POST'])
 def receive_image():
     try:
         if 'image' not in request.files:
-            return jsonify({'error': 'No se encontró archivo llamado "image"'}), 400
+            return jsonify({'error': 'No se recibió ningún archivo llamado "image"'}), 400
 
         image_file = request.files['image']
+        
+        if image_file.filename == '':
+            return jsonify({'error': 'Nombre de archivo vacío'}), 400
 
-        # Leer la imagen con PIL
-        img = Image.open(image_file.stream)
+        # Leer imagen en memoria
+        img_bytes = image_file.read()
+        img = Image.open(io.BytesIO(img_bytes))
+        
+        # Convertir la imagen a Base64 para visualizar si queremos
+        buffered = io.BytesIO()
+        img.save(buffered, format="JPEG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-        width, height = img.size
-        print(f"📸 Imagen recibida correctamente: {width}x{height}")
+        print("✅ Imagen recibida y procesada exitosamente. Tamaño:", img.size)
 
-        return jsonify({'message': f'Imagen recibida correctamente. Tamaño: {width}x{height}'})
+        return jsonify({'message': 'Imagen recibida correctamente', 'width': img.width, 'height': img.height})
 
     except Exception as e:
-        print(f"❌ Error procesando la imagen: {e}")
+        print("⚠️ Error procesando la imagen:", str(e))
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
