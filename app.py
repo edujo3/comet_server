@@ -4,39 +4,30 @@ import io
 
 app = Flask(__name__)
 
-# Limitar el tamaño máximo de subida (ejemplo: 5MB)
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
-
-@app.route('/')
-def home():
-    return "✅ COMET Server funcionando correctamente"
+@app.route('/', methods=['GET'])
+def index():
+    return '✅ COMET Server funcionando correctamente'
 
 @app.route('/receive_image', methods=['POST'])
 def receive_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No se encontró archivo llamado "image"'}), 400
+
+    file = request.files['image']
+
+    if file.filename == '':
+        return jsonify({'error': 'Nombre de archivo vacío'}), 400
+
     try:
-        if 'image' not in request.files:
-            return jsonify({"error": "No image file in the request"}), 400
+        # Leemos el archivo en memoria
+        img = Image.open(file.stream)
+        width, height = img.size
+        print(f"✅ Imagen recibida: {file.filename}, tamaño: {width}x{height}")
 
-        file = request.files['image']
-
-        if not file:
-            return jsonify({"error": "No file received"}), 400
-
-        image_bytes = file.read()
-
-        # Verificar que se leyó algo
-        if not image_bytes:
-            return jsonify({"error": "Empty image file"}), 400
-
-        # Abrir la imagen para validar que es imagen
-        image = Image.open(io.BytesIO(image_bytes))
-        print(f"✅ Imagen recibida: {image.format}, tamaño: {image.size}")
-
-        return jsonify({"message": "Image received successfully!"})
-
+        return jsonify({'message': f'Imagen recibida correctamente. Tamaño: {width}x{height}'})
     except Exception as e:
-        print(f"🚨 Error procesando imagen: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Error al procesar imagen: {str(e)}")
+        return jsonify({'error': 'Error al procesar la imagen'}), 500
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
