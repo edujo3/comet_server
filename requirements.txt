@@ -1,3 +1,5 @@
-Flask
-flask_cors
-gunicorn
+flask
+openai
+gtts
+python-dotenv
+werkzeug
