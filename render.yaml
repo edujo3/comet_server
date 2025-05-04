@@ -2,11 +2,5 @@ services:
   - type: web
     name: comet-server
     env: python
-    plan: free
-    runtime: python
-    buildCommand: ""
-    startCommand: gunicorn app:app --bind 0.0.0.0:10000
-    envVars:
-      - key: OPENAI_API_KEY
-        value: tu_clave_de_openai_aqui
-    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
