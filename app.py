@@ -1,30 +1,34 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask import Flask, request, send_file
+import openai
+from gtts import gTTS
+import tempfile
 
 app = Flask(__name__)
-CORS(app)
+openai.api_key = 'TU_API_KEY_DE_OPENAI'
 
-@app.route('/')
-def home():
-    return '✅ COMET Server funcionando correctamente'
+@app.route('/audio', methods=['POST'])
+def procesar_audio():
+    if 'audio' not in request.files:
+        return 'No se encontró el archivo de audio', 400
 
-@app.route('/receive_image', methods=['POST'])
-def receive_image():
-    try:
-        image = request.files.get('image')
-        if not image:
-            return jsonify({'error': 'No se recibió ninguna imagen'}), 400
+    archivo_audio = request.files['audio']
+    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_audio:
+        archivo_audio.save(temp_audio.name)
 
-        print(f"📥 Imagen recibida: {image.filename} (tipo: {image.content_type})")
+        # Transcribir el audio con Whisper
+        transcripcion = openai.Audio.transcribe("whisper-1", open(temp_audio.name, "rb"))
 
-        # Opcionalmente puedes guardarla si quieres en el servidor
-        # image.save(f"/tmp/{image.filename}")
+        # Generar respuesta con ChatGPT
+        respuesta_chat = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": transcripcion["text"]}]
+        )
 
-        return jsonify({'message': 'Imagen recibida correctamente'}), 200
+        respuesta_texto = respuesta_chat["choices"][0]["message"]["content"]
 
-    except Exception as e:
-        print(f"❌ Error al procesar imagen: {str(e)}")
-        return jsonify({'error': 'Error procesando la imagen'}), 500
+        # Convertir la respuesta en audio
+        tts = gTTS(respuesta_texto, lang='es')
+        archivo_respuesta = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
+        tts.save(archivo_respuesta.name)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    return send_file(archivo_respuesta.name, mimetype='audio/mpeg')
