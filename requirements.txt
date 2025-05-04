@@ -3,3 +3,6 @@ openai
 gtts
 python-dotenv
 werkzeug
+Flask
+gunicorn
+gtts
