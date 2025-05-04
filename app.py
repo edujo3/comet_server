@@ -11,20 +11,21 @@ def index():
 
 @app.route('/audio', methods=['POST'])
 def audio():
-    if 'Content-Type' not in request.headers or request.headers['Content-Type'] != 'audio/wav':
+    # Verifica encabezado correcto
+    if request.content_type != 'audio/wav':
         return "Tipo de contenido no soportado", 400
 
-    # Guardar archivo temporalmente
-    audio_path = tempfile.mktemp(suffix=".wav")
-    with open(audio_path, 'wb') as f:
-        f.write(request.data)
+    # Guarda el audio en un archivo temporal
+    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+    temp_audio.write(request.data)
+    temp_audio.close()
+    print(f"✅ Archivo de audio recibido y guardado en: {temp_audio.name}")
 
-    print(f"✅ Audio recibido: {audio_path}")
-
-    # Generar respuesta con gTTS (puedes cambiar el texto según el análisis)
-    texto = "Hola, estoy aquí para escucharte. Todo estará bien."
+    # Procesar con gTTS
+    texto = "Hola, te escucho. ¿Cómo te sientes hoy?"
     tts = gTTS(text=texto, lang='es')
-    respuesta_path = tempfile.mktemp(suffix=".mp3")
+    respuesta_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
     tts.save(respuesta_path)
 
+    print(f"🔊 Enviando archivo de respuesta: {respuesta_path}")
     return send_file(respuesta_path, mimetype="audio/mpeg")
